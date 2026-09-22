@@ -91,13 +91,30 @@ ontology-cowork-plugin/
 
 O arquivo `package.ps1` é usado somente durante o desenvolvimento. Ele não é incluído no ZIP instalado no Cowork.
 
+### Estrutura do plugin ZIP
+
+O arquivo `luxmoto-data-agent-cowork-plugin.zip` deve conter somente os arquivos necessários para execução do plugin:
+
+```text
+luxmoto-data-agent-cowork-plugin.zip
+├── manifest.json
+├── toolDescription.json
+├── color.png
+├── outline.png
+└── skills/
+    └── luxmoto-seguros/
+        └── SKILL.md
+```
+
+Os arquivos devem estar diretamente na raiz do ZIP, conforme a estrutura acima. Não inclua a pasta `ontology-cowork-plugin`, caminhos absolutos, barras invertidas, referências a diretórios pai, `package.ps1`, `README.md` ou a pasta `build`.
+
 ## Pré-requisitos
 
 - Um tenant Microsoft 365 com Microsoft 365 Copilot Cowork.
 - Um workspace Microsoft Fabric em capacidade compatível.
 - Um Data Agent criado e publicado.
 - A ontologia e as demais fontes de dados configuradas no Data Agent.
-- Uma conta do mesmo tenant com acesso ao workspace, ao Data Agent e às fontes.
+- Uma conta do mesmo tenant com, no mínimo, a função **Viewer** no workspace e acesso ao Data Agent e às fontes.
 - Permissão para criar App Registrations no Microsoft Entra.
 - Acesso ao Teams Developer Portal para registrar a configuração OAuth.
 
@@ -183,14 +200,69 @@ O Power BI Service usa este App ID:
 
 O `Dataset.Read.All` é necessário quando o Data Agent usa um modelo semântico Power BI. Manter as três permissões evita uma nova etapa de consentimento se essa fonte for adicionada posteriormente.
 
-As permissões do App Registration não substituem as permissões do usuário no Fabric. O usuário autenticado ainda precisa acessar o workspace, o Data Agent e suas fontes.
+As permissões do App Registration não substituem as permissões do usuário no Fabric. O usuário autenticado precisa ter, no mínimo, a função **Viewer** no workspace e acesso ao Data Agent e às fontes. A função no workspace não substitui permissões específicas exigidas por uma ontologia, um modelo semântico ou outra fonte configurada no Data Agent.
+
+## Por que registrar o OAuth no Teams Developer Portal
+
+O Cowork atua como cliente MCP e precisa obter um token do Fabric em nome do usuário antes de chamar o Data Agent. O App Registration e a configuração OAuth no Teams Developer Portal têm responsabilidades complementares:
+
+| Componente | Responsabilidade |
+|---|---|
+| App Registration no Microsoft Entra ID | Define a identidade OAuth da aplicação, as permissões delegadas, a redirect URI e a credencial |
+| Configuração OAuth no Teams Developer Portal | Informa ao runtime do Microsoft 365 como usar o App Registration e armazena o client secret com segurança |
+| `referenceId` no manifesto | Identifica a configuração OAuth sem expor credenciais no pacote |
+| Cowork | Conduz o login, obtém e renova tokens e envia o bearer token ao servidor MCP |
+| Fabric Data Agent MCP | Valida o token e aplica as permissões do usuário no Fabric |
+
+O Teams Developer Portal não substitui o App Registration nem atua como provedor de identidade. Ele fornece a configuração e o armazenamento seguro usados pelo runtime do Microsoft 365.
+
+### Por que o manifesto não se conecta diretamente ao App Registration
+
+O Application (client) ID não é suficiente para executar o fluxo OAuth. O Cowork também precisa dos endpoints de autorização e token, dos scopes, do client secret e da redirect URI. Além disso, o runtime precisa associar o token ao usuário autenticado e renová-lo quando necessário.
+
+Esses dados não devem ser distribuídos no pacote do plugin. Principalmente, o `manifest.json` nunca deve conter o client secret. Por isso, ele inclui somente o tipo `OAuthPluginVault` e um `referenceId` que aponta para a configuração protegida no Microsoft Enterprise Token Store.
+
+### Por que esta abordagem é necessária
+
+O Fabric Data Agent MCP exige um bearer token válido em todas as requisições. Ele não oferece Dynamic Client Registration nem client identity metadata. Portanto, o Cowork não consegue registrar automaticamente um cliente OAuth no endpoint do Data Agent.
+
+Como o Cowork é um runtime gerenciado, o plugin deve usar uma das formas de autenticação aceitas pela plataforma. Para este fluxo delegado, a configuração prévia do `OAuthPluginVault` no Teams Developer Portal é a abordagem adequada.
+
+Em um cliente MCP desenvolvido pela própria organização, como uma aplicação Python, seria possível usar MSAL ou `azure-identity` para obter o token diretamente. No Cowork, o runtime do Microsoft 365 executa essa responsabilidade.
+
+### Fluxo de autenticação
+
+1. O usuário faz uma pergunta que aciona o Data Agent.
+2. O Cowork identifica o connector MCP e lê a configuração `OAuthPluginVault` no manifesto.
+3. O runtime encontra a configuração OAuth por meio do `referenceId`.
+4. Se ainda não houver um token válido, o usuário é direcionado ao Microsoft Entra ID.
+5. O usuário entra com sua conta e concede consentimento quando necessário.
+6. O Entra ID retorna um authorization code para a redirect URI do Microsoft 365.
+7. O runtime troca o código por um token do Fabric usando a configuração protegida.
+8. O token é armazenado no Microsoft Enterprise Token Store e pode ser renovado com `offline_access`.
+9. O Cowork chama o endpoint MCP com o bearer token.
+10. O Fabric valida o token e verifica o acesso do usuário ao workspace, ao Data Agent e às fontes.
+
+Essa arquitetura atende a uma exigência técnica da plataforma e reforça a segurança. O client secret e os tokens não são distribuídos no plugin, a configuração OAuth pode ser restringida à organização e ao Manifest app ID, e o Fabric continua aplicando as permissões do usuário autenticado.
+
+O fluxo abaixo detalha como o Cowork usa o `OAuthPluginVault`, o Microsoft Entra ID e um token delegado para acessar o Fabric Data Agent. O Fabric valida o token e aplica as permissões do usuário antes de permitir consultas à ontologia.
+
+![Fluxo de autenticação e tokens entre Cowork, OAuthPluginVault, Microsoft Entra ID e Fabric](./docs/images/cowork-fabric-authentication-flow.png)
+
+- Nunca salve client secrets no repositório.
+- Não inclua tokens de acesso no manifesto ou na documentação.
+- Use `OAuthPluginVault` para manter as credenciais no Microsoft Enterprise Token Store.
+- Restrinja o OAuth client registration ao Manifest app ID depois dos testes.
+- Defina uma política para rotação do client secret.
+- Remova o acesso de usuários que não devem consultar os dados.
+- As permissões do Fabric e das fontes continuam sendo aplicadas ao usuário autenticado.
 
 ## Registrar o OAuth no Teams Developer Portal
 
-1. Abra o Teams Developer Portal.
-2. Acesse **Tools**.
-3. Abra **OAuth client registration**.
-4. Selecione **Register client**.
+1. Abra a página [OAuth client registration](https://dev.teams.microsoft.com/tools/oauth-configuration) no Teams Developer Portal.
+2. Selecione **Register client**.
+
+Também é possível acessar essa página pelo menu **Tools** e, em seguida, **OAuth client registration**.
 
 ### App settings
 
@@ -371,7 +443,7 @@ Verifique:
 - se o `referenceId` existe no tenant correto;
 - se o registro OAuth permite o Manifest app ID;
 - se o usuário autenticado pertence ao tenant do Fabric;
-- se o usuário acessa o workspace, o Data Agent e suas fontes.
+- se o usuário tem, no mínimo, a função **Viewer** no workspace e acesso ao Data Agent e às fontes.
 
 ### A autenticação não abre
 
@@ -433,19 +505,7 @@ skills/luxmoto-seguros/SKILL.md
 
 Use `package.ps1`, que cria e valida os nomes das entradas.
 
-## Segurança
 
-O fluxo abaixo detalha como o Cowork usa o `OAuthPluginVault`, o Microsoft Entra ID e um token delegado para acessar o Fabric Data Agent. O Fabric valida o token e aplica as permissões do usuário antes de permitir consultas à ontologia.
-
-![Fluxo de autenticação e tokens entre Cowork, OAuthPluginVault, Microsoft Entra ID e Fabric](./docs/images/cowork-fabric-authentication-flow.png)
-
-- Nunca salve client secrets no repositório.
-- Não inclua tokens de acesso no manifesto ou na documentação.
-- Use `OAuthPluginVault` para manter as credenciais no Microsoft Enterprise Token Store.
-- Restrinja o OAuth client registration ao Manifest app ID depois dos testes.
-- Defina uma política para rotação do client secret.
-- Remova o acesso de usuários que não devem consultar os dados.
-- As permissões do Fabric e das fontes continuam sendo aplicadas ao usuário autenticado.
 
 ## Referências
 
