@@ -1,0 +1,52 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.28/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.28",
+  "version": "1.2.0",
+  "id": "67a1aa0d-1bba-4bc1-a4bd-79ca249f0c90",
+  "developer": {
+    "name": "LuxMotos Seguros",
+    "websiteUrl": "https://github.com/mcircelli_microsoft/fabric-cowork-ontology-demo",
+    "privacyUrl": "https://github.com/mcircelli_microsoft/fabric-cowork-ontology-demo#privacy",
+    "termsOfUseUrl": "https://github.com/mcircelli_microsoft/fabric-cowork-ontology-demo#terms"
+  },
+  "name": {
+    "short": "LuxMoto Seguros",
+    "full": "LuxMoto Seguros | Data Agent de apólices e motocicletas"
+  },
+  "description": {
+    "short": "Consulte apólices, clientes, motos, riscos e coberturas.",
+    "full": "Consulta o Data Agent do Microsoft Fabric da LuxMoto Seguros, fundamentado na ontologia Fabric IQ. Use para localizar e relacionar apólices de seguro de motocicletas, status da apólice, clientes segurados, marcas e modelos de motos, classes de risco, valores segurados e coberturas contratadas. Também permite filtrar, agrupar e apresentar os resultados em tabelas."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#1B5E8C",
+  "agentSkills": [
+    {
+      "folder": "./skills/luxmoto-seguros"
+    }
+  ],
+  "agentConnectors": [
+    {
+      "id": "luxmotos-fabric-data-agent",
+      "displayName": "Data Agent de seguros da LuxMoto",
+      "description": "Consulte o Data Agent do Fabric da LuxMoto Seguros, fundamentado na ontologia de seguros de motocicletas. Use este conector para perguntas sobre apólices, clientes segurados, status ativo ou inativo, motocicletas, marcas, modelos, classes de risco, valores segurados e coberturas contratadas. Use também para cruzar essas entidades, aplicar filtros e produzir listas, totais ou tabelas, por exemplo: listar somente apólices ativas com cliente, modelo, classe de risco e valor segurado; ou identificar as coberturas contratadas para motos BMW.",
+      "toolSource": {
+        "remoteMcpServer": {
+          "mcpServerUrl": "https://api.fabric.microsoft.com/v1/mcp/workspaces/d15dc07d-3e17-457a-9346-3b3dae156262/dataagents/9400461b-ecc3-4108-b7ad-bd3152f82a00/agent",
+          "authorization": {
+            "type": "OAuthPluginVault",
+            "referenceId": "NWJlOGFhNjQtNjIxMy00MjMxLTlhZDAtMTE5ZWI5NzhjNGM0IyNlOWZhMDQzMS1mZDQ1LTQ3M2MtYWUxNC1iMjVjZWM1MzEwZDk="
+          },
+          "mcpToolDescription": {
+            "file": "toolDescription.json"
+          }
+        }
+      }
+    }
+  ],
+  "validDomains": [
+    "api.fabric.microsoft.com"
+  ]
+}

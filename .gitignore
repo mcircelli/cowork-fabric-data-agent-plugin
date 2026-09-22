@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.*
+*.log
+dist/
+.azure/
+*.zip
+deploy.zip
+local.log
+local.err
+.DS_Store

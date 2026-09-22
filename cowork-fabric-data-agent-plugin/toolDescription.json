@@ -1,0 +1,21 @@
+{
+  "tools": [
+    {
+      "name": "DataAgent_Data_Agent_Fabric_LuxMotoSeguros",
+      "title": "Consultar o Data Agent de seguros da LuxMoto",
+      "description": "Envie uma pergunta ao Data Agent do Microsoft Fabric da LuxMoto Seguros. O Data Agent está fundamentado na ontologia de seguros de motocicletas e responde sobre apólices, clientes segurados, motocicletas, marcas, modelos, classes de risco, valores segurados e coberturas contratadas. Use filtros como status da apólice ou marca da moto e solicite listas, agregações ou tabelas conforme necessário.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "Pergunta em linguagem natural sobre seguros de motocicletas. Exemplos: 'Mostre em uma tabela as apólices ativas com cliente, modelo da moto, classe de risco e valor segurado' ou 'Quais coberturas foram contratadas para motos BMW?'."
+          }
+        },
+        "required": [
+          "question"
+        ]
+      }
+    }
+  ]
+}
