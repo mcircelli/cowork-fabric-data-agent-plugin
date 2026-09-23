@@ -1,4 +1,4 @@
-# Plugin Cowork para o Data Agent da LuxMoto Seguros
+# Plugin Cowork para o Fabric Data Agent da LuxMoto Seguros
 
 Este repositório contém um plugin para Microsoft 365 Copilot Cowork que consulta o Data Agent da LuxMoto Seguros no Microsoft Fabric. O Data Agent está fundamentado em uma ontologia Fabric IQ com dados de apólices, clientes, motocicletas, classes de risco, valores segurados e coberturas.
 
@@ -227,20 +227,6 @@ O Teams Developer Portal não substitui o App Registration nem atua como provedo
 O OAuthPluginVault funciona como uma camada gerenciada de autenticação entre o Copilot Cowork e o serviço/API exposto pelo plugin, evitando que o plugin precise armazenar ou manipular diretamente credenciais OAuth. A documentação do Cowork recomenda esse modelo para APIs OAuth 2.0, inclusive para cenários de produção.
 
 
-### Por que o manifesto não se conecta diretamente ao App Registration
-
-O Application (client) ID não é suficiente para executar o fluxo OAuth. O Cowork também precisa dos endpoints de autorização e token, dos scopes, do client secret e da redirect URI. Além disso, o runtime precisa associar o token ao usuário autenticado e renová-lo quando necessário.
-
-Esses dados não devem ser distribuídos no pacote do plugin. Principalmente, o `manifest.json` nunca deve conter o client secret. Por isso, ele inclui somente o tipo `OAuthPluginVault` e um `referenceId` que aponta para a configuração protegida no Microsoft Enterprise Token Store.
-
-### Por que esta abordagem é necessária
-
-O Fabric Data Agent MCP exige um bearer token válido em todas as requisições. Ele não oferece Dynamic Client Registration nem client identity metadata. Portanto, o Cowork não consegue registrar automaticamente um cliente OAuth no endpoint do Data Agent.
-
-Como o Cowork é um runtime gerenciado, o plugin deve usar uma das formas de autenticação aceitas pela plataforma. Para este fluxo delegado, a configuração prévia do `OAuthPluginVault` no Teams Developer Portal é a abordagem adequada.
-
-Em um cliente MCP desenvolvido pela própria organização, como uma aplicação Python, seria possível usar MSAL ou `azure-identity` para obter o token diretamente. No Cowork, o runtime do Microsoft 365 executa essa responsabilidade.
-
 ### Fluxo de autenticação
 
 1. O usuário faz uma pergunta que aciona o Data Agent.
@@ -268,6 +254,21 @@ Atenção:
 - Defina uma política para rotação do client secret.
 - Remova o acesso de usuários que não devem consultar os dados.
 - As permissões do Fabric e das fontes continuam sendo aplicadas ao usuário autenticado.
+
+### Por que esta abordagem é necessária
+
+O Fabric Data Agent MCP exige um bearer token válido em todas as requisições. Ele não oferece Dynamic Client Registration nem client identity metadata. Portanto, o Cowork não consegue registrar automaticamente um cliente OAuth no endpoint do Data Agent.
+
+Como o Cowork é um runtime gerenciado, o plugin deve usar uma das formas de autenticação aceitas pela plataforma. Para este fluxo delegado, a configuração prévia do `OAuthPluginVault` no Teams Developer Portal é a abordagem adequada.
+
+Em um cliente MCP desenvolvido pela própria organização, como uma aplicação Python, seria possível usar MSAL ou `azure-identity` para obter o token diretamente. No Cowork, o runtime do Microsoft 365 executa essa responsabilidade.
+
+### Por que o manifesto não se conecta diretamente ao App Registration
+
+O Application (client) ID não é suficiente para executar o fluxo OAuth. O Cowork também precisa dos endpoints de autorização e token, dos scopes, do client secret e da redirect URI. Além disso, o runtime precisa associar o token ao usuário autenticado e renová-lo quando necessário.
+
+Esses dados não devem ser distribuídos no pacote do plugin. Principalmente, o `manifest.json` nunca deve conter o client secret. Por isso, ele inclui somente o tipo `OAuthPluginVault` e um `referenceId` que aponta para a configuração protegida no Microsoft Enterprise Token Store.
+
 
 ## Registrar o OAuth no Teams Developer Portal
 
