@@ -9,9 +9,17 @@ O pacote combina:
 - autenticação delegada Microsoft Entra por `OAuthPluginVault`;
 - um script PowerShell que valida e gera o ZIP aceito pelo Cowork.
 
+ 
+````
+Este artigo não aborda a criação do Data Agent no Microsoft Fabric nem a configuração de suas fontes, como Lakehouse, Ontologia e Modelo Semântico. O projeto pressupõe que esses recursos já estejam criados e configurados. O objetivo é demonstrar como consumir o Data Agent por meio de um plugin do Microsoft 365 Copilot Cowork.
+````
+
 ## Arquitetura
 
 O diagrama apresenta o fluxo principal da esquerda para a direita. O Microsoft Entra ID autentica o usuário, enquanto o Data Agent consulta a ontologia e as fontes configuradas no Fabric.
+
+O Data Agent MCP expõe uma única ferramenta. O Cowork envia a pergunta completa para essa ferramenta e recebe uma resposta fundamentada nas fontes configuradas no Data Agent.
+
 
 ```mermaid
 flowchart LR
@@ -48,7 +56,7 @@ flowchart LR
     Cowork -->|apresenta a resposta| User
 ```
 
-O Data Agent MCP expõe uma única ferramenta. O Cowork envia a pergunta completa para essa ferramenta e recebe uma resposta fundamentada nas fontes configuradas no Data Agent.
+
 
 ## Identificadores usados
 
@@ -173,7 +181,7 @@ Crie o App Registration no mesmo tenant que hospeda o Data Agent.
 4. Copie o valor do secret imediatamente.
 5. Não salve o client secret neste repositório.
 
-## Configurar as permissões de API
+### Configurar as permissões de API
 
 O fluxo do Cowork usa permissões delegadas do usuário.
 
@@ -216,6 +224,9 @@ O Cowork atua como cliente MCP e precisa obter um token do Fabric em nome do usu
 
 O Teams Developer Portal não substitui o App Registration nem atua como provedor de identidade. Ele fornece a configuração e o armazenamento seguro usados pelo runtime do Microsoft 365.
 
+O OAuthPluginVault funciona como uma camada gerenciada de autenticação entre o Copilot Cowork e o serviço/API exposto pelo plugin, evitando que o plugin precise armazenar ou manipular diretamente credenciais OAuth. A documentação do Cowork recomenda esse modelo para APIs OAuth 2.0, inclusive para cenários de produção.
+
+
 ### Por que o manifesto não se conecta diretamente ao App Registration
 
 O Application (client) ID não é suficiente para executar o fluxo OAuth. O Cowork também precisa dos endpoints de autorização e token, dos scopes, do client secret e da redirect URI. Além disso, o runtime precisa associar o token ao usuário autenticado e renová-lo quando necessário.
@@ -249,6 +260,7 @@ O fluxo abaixo detalha como o Cowork usa o `OAuthPluginVault`, o Microsoft Entra
 
 ![Fluxo de autenticação e tokens entre Cowork, OAuthPluginVault, Microsoft Entra ID e Fabric](./docs/images/cowork-fabric-authentication-flow.png)
 
+Atenção:
 - Nunca salve client secrets no repositório.
 - Não inclua tokens de acesso no manifesto ou na documentação.
 - Use `OAuthPluginVault` para manter as credenciais no Microsoft Enterprise Token Store.
@@ -513,3 +525,5 @@ Use `package.ps1`, que cria e valida os nomes das entradas.
 - [Build plugins for Copilot Cowork](https://learn.microsoft.com/microsoft-365/copilot/cowork/cowork-plugin-development)
 - [Register MCP servers as agent connectors](https://learn.microsoft.com/microsoftteams/platform/m365-apps/agent-connectors)
 - [Configure authentication for MCP and API plugins](https://learn.microsoft.com/microsoft-365/copilot/extensibility/plugin-authentication)
+- [Access tokens in the Microsoft identity platform](https://learn.microsoft.com/pt-br/entra/identity-platform/access-tokens)
+- [Microsoft 365 Agents Toolkit Developer Portal](https://dev.teams.microsoft.com/)
